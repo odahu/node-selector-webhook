@@ -42,10 +42,6 @@ func (nsm *NodeSelectorMutator) Handle(ctx context.Context, req admission.Reques
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if pod.Namespace != "model-deployment" {
-		return admission.Allowed("Not observed namespace")
-	}
-
 	nsm.addNodeSelectors(pod)
 
 	marshaledPod, err := json.Marshal(pod)

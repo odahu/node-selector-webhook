@@ -17,20 +17,23 @@ limitations under the License.
 package main
 
 import (
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-var log = logf.Log.WithName("node-selector-controller")
 
-func AttachWebhookServer(mgr manager.Manager, cfg WebhookConfig) (*webhook.Server, error)  {
+var (
+	log = logf.Log.WithName("node-selector-controller")
+	WebhookV1Path = "/mutate-v1-pod"
+)
+
+func AttachWebhookServer(mgr manager.Manager, cfg WebhookConfig) {
 
 
 	// Setup webhooks
@@ -41,15 +44,7 @@ func AttachWebhookServer(mgr manager.Manager, cfg WebhookConfig) (*webhook.Serve
 	hookServer.KeyName = cfg.KeyName
 
 	log.Info("registering webhooks to the webhook server")
-	hookServer.Register("/mutate-v1-pod", &webhook.Admission{Handler: &NodeSelectorMutator{}})
-
-	log.Info("starting manager")
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
-		return nil, err
-	}
-
-	return hookServer, nil
-
+	hookServer.Register(WebhookV1Path, &webhook.Admission{Handler: &NodeSelectorMutator{}})
 }
 
 func main() {
@@ -58,14 +53,20 @@ func main() {
 
 	// Setup a Manager
 	log.Info("setting up manager")
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
+	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
+		Namespace: "model_deployment",
+	})
 	if err != nil {
 		log.Error(err, "unable to set up overall controller manager")
 		os.Exit(1)
 	}
 
-	_, err = AttachWebhookServer(mgr, WebhookConfig{})
-	if err != nil {
+	AttachWebhookServer(mgr, WebhookConfig{})
+
+	log.Info("starting manager")
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		panic("Unable to attach webhook server to manager")
 	}
+
+
 }

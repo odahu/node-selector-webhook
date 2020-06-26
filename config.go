@@ -3,8 +3,6 @@ package main
 import v1 "k8s.io/api/core/v1"
 
 type WebhookConfig struct {
-	// Kubernetes namespace, where model deployments will be deployed
-	Namespace string `json:"namespace"`
 	// Kubernetes node selector for model deployments
 	NodeSelector map[string]string `json:"nodeSelector"`
 	// Kubernetes tolerations for model deployments
