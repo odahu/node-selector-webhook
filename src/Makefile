@@ -24,7 +24,6 @@ build:
 ## docker-build: Build docker image
 docker-build:
 	docker build -t odahu/node-selector-webhook:${BUILD_TAG} -f ../containers/Dockerfile .
-	docker build . -f ../containers/Dockerfile
 
 ## docker-push: Push image to docker
 docker-push:
