@@ -91,10 +91,7 @@ pipeline {
                         cicdLibrary = load "${env.sharedLibPath}"
                     }
 
-                    verFiles = [
-                            "mlflow/odahuflow/mlflowrunner/__version__.py",
-                    ]
-                    cicdLibrary.setBuildMeta(verFiles)
+                    cicdLibrary.setBuildMeta()
                 }
             }
         }
