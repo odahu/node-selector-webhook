@@ -25,12 +25,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
+const (
+	ActivationLabel = "odahu/force-pod-nodes"
+)
+
 // +kubebuilder:webhook:path=/mutate-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
 
 // NodeSelectorMutator annotates Pods
 type NodeSelectorMutator struct {
 	decoder *admission.Decoder
-	config *WebhookConfig
+	// Kubernetes node selector for model deployments
+	NodeSelector map[string]string `json:"nodeSelector"`
+	// Kubernetes tolerations for model deployments
+	Toleration                []corev1.Toleration                `json:"tolerations,omitempty"`
 }
 
 // NodeSelectorMutator adds an annotation to every incoming pods.
@@ -62,21 +69,21 @@ func (nsm *NodeSelectorMutator) InjectDecoder(d *admission.Decoder) error {
 }
 
 
-//Adds node selectors and tolerations from the deployment config to knative pods
+//Adds node selectors and tolerations from the deployment Config to knative pods
 func (nsm *NodeSelectorMutator) addNodeSelectors(pod *corev1.Pod)  {
-	nodeSelector := nsm.config.NodeSelector
+	nodeSelector := nsm.NodeSelector
 	if len(nodeSelector) > 0 {
 		pod.Spec.NodeSelector = nodeSelector
 		log.Info("Assigning node selector to nsm pod", "nodeSelector", nodeSelector, "pod name", pod.Name)
 	} else {
-		log.Info("Got empty node selector from deployment config, skipping", "pod name", pod.Name)
+		log.Info("Got empty node selector from deployment Config, skipping", "pod name", pod.Name)
 	}
 
-	toleration := nsm.config.Toleration
+	toleration := nsm.Toleration
 	if toleration != nil {
-		pod.Spec.Tolerations = append(pod.Spec.Tolerations, *toleration)
-		log.Info("Assigning toleration to nsm pod", "toleration", toleration, "pod name", pod.Name)
+		pod.Spec.Tolerations = append(pod.Spec.Tolerations, toleration...)
+		log.Info("Assigning tolerations to nsm pod", "tolerations", toleration, "pod name", pod.Name)
 	} else {
-		log.Info("Got empty toleration from deployment config, skipping", "pod name", pod.Name)
+		log.Info("Got empty tolerations from deployment Config, skipping", "pod name", pod.Name)
 	}
 }

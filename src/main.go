@@ -33,19 +33,10 @@ var (
 	WebhookV1Path = "/mutate-v1-pod"
 )
 
-func AttachWebhookServer(mgr manager.Manager, cfg WebhookConfig) {
+const (
+	V1Path = "/mutate-v1-pod"
+)
 
-
-	// Setup webhooks
-	log.Info("setting up webhook server")
-	hookServer := mgr.GetWebhookServer()
-	hookServer.CertDir = cfg.CrtDirName
-	hookServer.CertName = cfg.CrtName
-	hookServer.KeyName = cfg.KeyName
-
-	log.Info("registering webhooks to the webhook server")
-	hookServer.Register(WebhookV1Path, &webhook.Admission{Handler: &NodeSelectorMutator{}})
-}
 
 func main() {
 
@@ -61,7 +52,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	AttachWebhookServer(mgr, WebhookConfig{})
+	// Setup webhooks
+	log.Info("setting up webhook server")
+	hookServer := mgr.GetWebhookServer()
+	hookServer.CertDir = ""
+	hookServer.CertName = ""
+	hookServer.KeyName = ""
+
+	log.Info("registering webhooks to the webhook server")
+	hookServer.Register(V1Path, &webhook.Admission{Handler: &NodeSelectorMutator{}})
 
 	log.Info("starting manager")
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
