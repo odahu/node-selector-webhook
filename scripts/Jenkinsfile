@@ -102,7 +102,7 @@ pipeline {
         stage("Build Docker image"){
             steps {
                 script {
-                    cicdLibrary.buildDockerImage('node-selector-webhook', '.', 'containers/Dockerfile')
+                    cicdLibrary.buildDockerImage('node-selector-webhook', 'src', 'containers/Dockerfile')
                 }
             }
         }
