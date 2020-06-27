@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "node-selector-webhook.fullname" . }}
+  labels:
+    {{- include "node-selector-webhook.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "node-selector-webhook.selectorLabels" . | nindent 4 }}

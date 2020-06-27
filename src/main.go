@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"github.com/odahu/node-selector-webhook/pkg/config"
 	nswebhook "github.com/odahu/node-selector-webhook/pkg/webhook"
 	"github.com/spf13/cobra"
@@ -55,7 +56,7 @@ func init() {
 
 	mainCmd.PersistentFlags().StringVar(&config.CfgFile, "config", "", "config file")
 	if err := mainCmd.MarkPersistentFlagRequired("config"); err != nil {
-		log.Error(err, "")
+		log.Info(fmt.Sprintf("%v", err))
 	}
 }
 
@@ -71,6 +72,7 @@ func runManager() error {
 	log.Info("Setting up manager")
 	mgr, err := manager.New(k8s_config.GetConfigOrDie(), manager.Options{
 		Namespace: "model_deployment",
+		Port: appConfig.Port,
 	})
 	if err != nil {
 		log.Error(err, "Unable create manager")
@@ -102,7 +104,6 @@ func runManager() error {
 func main() {
 
 	if err := mainCmd.Execute(); err != nil {
-		log.Error(err, "")
 		os.Exit(1)
 	}
 

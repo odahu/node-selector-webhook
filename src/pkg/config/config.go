@@ -25,7 +25,7 @@ type Config struct {
 	// Key name
 	KeyName string `json:"keyName"`
 	// Webhook port
-	Port string `json:"port"`
+	Port int `json:"port"`
 }
 
 func LoadConfig() (*Config, error) {
@@ -39,7 +39,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	config := &Config{
-		Port: "8080",
+		Port: 5000,
 	}
 
 	err := viper.Unmarshal(config)
