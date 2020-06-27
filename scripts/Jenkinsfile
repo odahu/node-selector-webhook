@@ -1,0 +1,147 @@
+import java.text.SimpleDateFormat
+
+class Globals {
+    static String rootCommit = null
+    static String buildVersion = null
+    static String dockerLabels = null
+    static String dockerCacheArg = null
+}
+
+pipeline {
+    agent { label 'ec2builder'}
+
+    options{
+        buildDiscarder(logRotator(numToKeepStr: '35', artifactNumToKeepStr: '35'))
+    }
+    environment {
+        /*
+        Job parameters
+        */
+        pathToCharts= "${WORKSPACE}/helms"
+        sharedLibPath = "legion-cicd/pipelines/legionPipeline.groovy"
+        //Git Branch to build package from
+        param_git_branch = "${params.GitBranch}"
+
+        /*
+        Release parameters
+        */
+        //Set next releases version explicitly
+        param_next_version = "${params.NextVersion}"
+        //Release version to tag all artifacts to
+        param_release_version = "${params.ReleaseVersion}"
+        //Push release git tag
+        param_push_git_tag = "${params.PushGitTag}"
+        //Rewrite git tag i exists
+        param_force_tag_push = "${params.ForceTagPush}"
+        param_update_version_string = "${params.UpdateVersionString}"
+        param_update_master = "${params.UpdateMaster}"
+        //Build major version release and optionally push it to public repositories
+        param_stable_release = "${params.StableRelease}"
+
+        /*
+        CI/CD repository
+        */
+        legionCicdGitlabKey = "${params.legionCicdGitlabKey}"
+        param_git_deploy_key = "${params.GitDeployKey}"
+        //Legion CICD repo url (for pipeline methods import)
+        param_legion_cicd_repo = "${params.LegionCicdRepo}"
+        //Legion repo branch (tag or branch name)
+        param_legion_cicd_branch = "${params.LegionCicdBranch}"
+
+        /*
+        Helm
+        */
+        param_helm_repo_git_url = "${params.HelmRepoGitUrl}"
+        param_helm_repo_git_branch = "${params.HelmRepoGitBranch}"
+        param_helm_repository = "${params.HelmRepository}"
+
+        /*
+        Docker
+        */
+        param_dockerhub_publishing_enabled = "${params.DockerHubPublishingEnabled}"
+        param_docker_registry = "${params.DockerRegistry}"
+        param_docker_hub_registry = "${params.DockerHubRegistry}"
+        param_enable_docker_cache = "${params.EnableDockerCache}"
+        param_docker_cache_source = "${params.DockerCacheSource}"
+
+        /*
+        PyPi
+        */
+        param_pypi_private_url = "${params.PyPiPrivateUrl}"
+    }
+
+    stages {
+        stage('Checkout and set build vars') {
+            steps {
+                cleanWs()
+                checkout scm
+                script {
+                    // import ODAHU components
+                    sshagent(["${env.legionCicdGitlabKey}"]) {
+                        print ("Checkout CI/CD repo")
+                        sh"""#!/bin/bash -ex
+                        mkdir -p \$(getent passwd \$(whoami) | cut -d: -f6)/.ssh && ssh-keyscan git.epam.com >> \$(getent passwd \$(whoami) | cut -d: -f6)/.ssh/known_hosts
+                        if [ ! -d "legion-cicd" ]; then
+                            git clone ${env.param_legion_cicd_repo} legion-cicd
+                        fi
+                        cd legion-cicd && git checkout ${env.param_legion_cicd_branch}
+                        """
+
+                        print ("Load CI/CD common library")
+                        cicdLibrary = load "${env.sharedLibPath}"
+                    }
+
+                    verFiles = [
+                            "mlflow/odahuflow/mlflowrunner/__version__.py",
+                    ]
+                    cicdLibrary.setBuildMeta(verFiles)
+                }
+            }
+        }
+
+        stage("Build Docker image"){
+            steps {
+                script {
+                    cicdLibrary.buildDockerImage('node-selector-webhook', '.', 'containers/Dockerfile')
+                }
+            }
+        }
+        stage('Upload artifacts'){
+            parallel {
+                stage('Package and upload helm charts') {
+                    steps {
+                        script {
+                            cicdLibrary.uploadHelmCharts(env.pathToCharts)
+                        }
+                    }
+                }
+                stage("Upload Docker image"){
+                    steps {
+                        script {
+                            cicdLibrary.uploadDockerImage('node-selector-webhook', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
+                        }
+                    }
+                }
+            }
+        }
+
+        stage("Update branch") {
+            steps {
+                script {
+                    cicdLibrary.updateReleaseBranches(
+                        env.param_stable_release.toBoolean(),
+                        env.param_push_git_tag.toBoolean(),
+                        env.param_update_version_string.toBoolean(),
+                        env.param_update_master.toBoolean(),
+                        env.param_git_deploy_key)
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            deleteDir()
+        }
+    }
+}
