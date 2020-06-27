@@ -91,7 +91,10 @@ pipeline {
                         cicdLibrary = load "${env.sharedLibPath}"
                     }
 
-                    cicdLibrary.setBuildMeta()
+                    def verFiles = [
+                            'version.info'
+                    ]
+                    cicdLibrary.setBuildMeta(verFiles, 'cicd')
                 }
             }
         }
