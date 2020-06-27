@@ -94,7 +94,7 @@ pipeline {
                     def verFiles = [
                             'version.info'
                     ]
-                    cicdLibrary.setBuildMeta(verFiles, 'cicd')
+                    cicdLibrary.setBuildMeta(verFiles)
                 }
             }
         }
