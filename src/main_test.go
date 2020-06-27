@@ -2,11 +2,9 @@ package main_test
 
 import (
 	"context"
-	"encoding/json"
 	. "github.com/odahu/node-selector-webhook"
 	"github.com/odahu/node-selector-webhook/pkg/config"
 	nswebhook "github.com/odahu/node-selector-webhook/pkg/webhook"
-	"io/ioutil"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -147,13 +145,6 @@ func TestMain(m *testing.M) {
 	appConfig = setupConfig()
 
 	env := setupTestEnv()
-
-	a := env.WebhookInstallOptions.MutatingWebhooks[0]
-	aj, _ := json.Marshal(a)
-	err = ioutil.WriteFile("./mutatingwebhookconfig.json", aj, 0644)
-	if err != nil{
-		panic("")
-	}
 
 	if kubeConfig, err = env.Start(); err != nil {
 		stdlog.Fatal(err)
