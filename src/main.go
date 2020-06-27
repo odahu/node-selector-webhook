@@ -17,9 +17,12 @@ limitations under the License.
 package main
 
 import (
+	"github.com/odahu/node-selector-webhook/pkg/config"
+	nswebhook "github.com/odahu/node-selector-webhook/pkg/webhook"
+	"github.com/spf13/cobra"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	k8s_config "sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -33,39 +36,77 @@ var (
 	WebhookV1Path = "/mutate-v1-pod"
 )
 
-const (
-	V1Path = "/mutate-v1-pod"
-)
+
+
+var mainCmd = &cobra.Command{
+	Use:   "node-selector-webhook",
+	Short: "odahu-flow API server",
+	Run: func(cmd *cobra.Command, args []string) {
+		err := runManager()
+		if err != nil {
+			os.Exit(1)
+		}
+	},
+}
+
+func init() {
+
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+
+	mainCmd.PersistentFlags().StringVar(&config.CfgFile, "config", "", "config file")
+	if err := mainCmd.MarkPersistentFlagRequired("config"); err != nil {
+		log.Error(err, "")
+	}
+}
+
+func runManager() error {
+
+	appConfig, err := config.LoadConfig()
+	if err != nil {
+		log.Error(err, "Unable load config")
+		return err
+	}
+
+	// Setup a Manager
+	log.Info("Setting up manager")
+	mgr, err := manager.New(k8s_config.GetConfigOrDie(), manager.Options{
+		Namespace: "model_deployment",
+	})
+	if err != nil {
+		log.Error(err, "Unable create manager")
+		return err
+	}
+
+	// Setup webhooks
+	log.Info("Setting up webhook server")
+	hookServer := mgr.GetWebhookServer()
+	hookServer.CertDir  = appConfig.CrtDirName
+	hookServer.CertName = appConfig.CrtName
+	hookServer.KeyName =  appConfig.KeyName
+
+	log.Info("Registering webhooks to the webhook server")
+	hookServer.Register(WebhookV1Path, &webhook.Admission{Handler: &nswebhook.NodeSelectorMutator{
+		NodeSelector: appConfig.NodeSelector,
+		Toleration:   appConfig.Tolerations,
+	}})
+
+	log.Info("Starting manager")
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+		log.Error(err, "Error in manager control loop")
+		return err
+	}
+	return nil
+}
 
 
 func main() {
 
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-
-	// Setup a Manager
-	log.Info("setting up manager")
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
-		Namespace: "model_deployment",
-	})
-	if err != nil {
-		log.Error(err, "unable to set up overall controller manager")
+	if err := mainCmd.Execute(); err != nil {
+		log.Error(err, "")
 		os.Exit(1)
 	}
 
-	// Setup webhooks
-	log.Info("setting up webhook server")
-	hookServer := mgr.GetWebhookServer()
-	hookServer.CertDir = ""
-	hookServer.CertName = ""
-	hookServer.KeyName = ""
 
-	log.Info("registering webhooks to the webhook server")
-	hookServer.Register(V1Path, &webhook.Admission{Handler: &NodeSelectorMutator{}})
-
-	log.Info("starting manager")
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
-		panic("Unable to attach webhook server to manager")
-	}
 
 
 }

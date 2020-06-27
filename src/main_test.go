@@ -3,6 +3,8 @@ package main_test
 import (
 	"context"
 	. "github.com/odahu/node-selector-webhook"
+	"github.com/odahu/node-selector-webhook/pkg/config"
+	nswebhook "github.com/odahu/node-selector-webhook/pkg/webhook"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +34,7 @@ var (
 	kubeConfig   *rest.Config
 	mgr          manager.Manager
 
-	appConfig Config
+	appConfig config.Config
 )
 
 // Create namespaces one of which is labeled by `ActivationLabel` and therefore is activated
@@ -47,7 +49,7 @@ func setupNamespaces() error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   nsEnabled,
 			Labels: map[string]string{
-				ActivationLabel: "enabled",
+				nswebhook.ActivationLabel: "enabled",
 			},
 		},
 		Spec:       corev1.NamespaceSpec{},
@@ -102,7 +104,7 @@ func setupTestEnv() *envtest.Environment {
 							NamespaceSelector: &metav1.LabelSelector{
 								MatchExpressions: []metav1.LabelSelectorRequirement{
 									{
-										Key:      ActivationLabel,
+										Key:      nswebhook.ActivationLabel,
 										Operator: metav1.LabelSelectorOpExists,
 										Values:   []string{},
 									},
@@ -119,8 +121,8 @@ func setupTestEnv() *envtest.Environment {
 	}
 }
 
-func setupConfig() Config {
-	return Config {
+func setupConfig() config.Config {
+	return config.Config {
 		NodeSelector: map[string]string{"mode": "odahu-flow-deployment"},
 		Tolerations:   []corev1.Toleration{
 			{
@@ -158,7 +160,7 @@ func TestMain(m *testing.M) {
 	}
 
 	hookServer := mgr.GetWebhookServer()
-	hookServer.Register(V1Path, &webhook.Admission{Handler: &NodeSelectorMutator{
+	hookServer.Register(WebhookV1Path, &webhook.Admission{Handler: &nswebhook.NodeSelectorMutator{
 		NodeSelector: appConfig.NodeSelector,
 		Toleration:   appConfig.Tolerations,
 	}})

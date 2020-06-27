@@ -14,22 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package webhook
 
 import (
 	"context"
 	"encoding/json"
 	"net/http"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-const (
-	ActivationLabel = "odahu/force-pod-nodes"
+var (
+	log = logf.Log.WithName("node-selector-controller").WithName("webhook")
 )
 
-// +kubebuilder:webhook:path=/mutate-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
+const (
+	ActivationLabel = "odahu/node-selector-webhook"
+)
 
 // NodeSelectorMutator annotates Pods
 type NodeSelectorMutator struct {
