@@ -39,7 +39,7 @@ var (
 
 // Create namespaces one of which is labeled by `ActivationLabel` and therefore is activated
 // to catch API requests for this webhook. Another one is not activated and therefore pod that
-// are created in this one are skipped by the webhook servere
+// are created in this one are skipped by the webhook server
 func setupNamespaces() error {
 
 	client := mgr.GetClient()

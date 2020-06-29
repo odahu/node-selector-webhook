@@ -41,7 +41,7 @@ var (
 
 var mainCmd = &cobra.Command{
 	Use:   "node-selector-webhook",
-	Short: "odahu-flow API server",
+	Short: "Node selector webhook server",
 	Run: func(cmd *cobra.Command, args []string) {
 		err := runManager()
 		if err != nil {
@@ -75,7 +75,7 @@ func runManager() error {
 		Port: appConfig.Port,
 	})
 	if err != nil {
-		log.Error(err, "Unable create manager")
+		log.Error(err, "Unable to create manager")
 		return err
 	}
 
