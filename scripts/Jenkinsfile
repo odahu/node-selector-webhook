@@ -80,7 +80,7 @@ pipeline {
                     sshagent(["${env.legionCicdGitlabKey}"]) {
                         print ("Checkout CI/CD repo")
                         sh"""#!/bin/bash -ex
-                        mkdir -p \$(getent passwd \$(whoami) | cut -d: -f6)/.ssh && ssh-keyscan git.epam.com >> \$(getent passwd \$(whoami) | cut -d: -f6)/.ssh/known_hosts
+                        export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
                         if [ ! -d "legion-cicd" ]; then
                             git clone ${env.param_legion_cicd_repo} legion-cicd
                         fi
