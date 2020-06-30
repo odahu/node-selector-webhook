@@ -1,0 +1,4 @@
+src/coverage.txt
+src/operator-report.xml
+src/vendor
+src/.env

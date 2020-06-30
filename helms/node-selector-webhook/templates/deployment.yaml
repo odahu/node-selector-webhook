@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+  {{- include "node-selector-webhook.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+  {{- include "node-selector-webhook.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+    {{- include "node-selector-webhook.selectorLabels" . | nindent 8 }}
+    spec:
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ .Release.Name }}-config
+        - name: certs
+          secret:
+            secretName: {{ .Release.Name }}-certs
+      containers:
+        - name: node-selector-webhook
+          imagePullPolicy: IfNotPresent
+          image: {{ .Values.image }}
+          command:
+            - ./node-selector-webhook
+            - --config
+            - /etc/node-selector-webhook/config.yaml
+          ports:
+            - containerPort: {{ .Values.config.port }}
+          volumeMounts:
+            - mountPath: /etc/node-selector-webhook
+              name: config
+            - mountPath: {{ .Values.config.crtDirName }}
+              name: certs

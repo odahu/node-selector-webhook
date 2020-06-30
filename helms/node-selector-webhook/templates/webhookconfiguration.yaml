@@ -1,0 +1,31 @@
+kind: MutatingWebhookConfiguration
+apiVersion: "admissionregistration.k8s.io/v1beta1"
+metadata:
+  name: {{ .Release.Name }}
+webhooks:
+  - name: "{{ .Release.Name }}.odahu.org"
+    clientConfig:
+      caBundle: {{ .Values.certs.ca }}
+      service:
+        namespace: {{ .Release.Namespace }}
+        port: {{ .Values.service.port }}
+        name: {{ .Release.Name }}
+        path: "/mutate-v1-pod"
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        resources:
+          - pods
+        scope: Namespaced
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    namespaceSelector:
+      matchExpressions:
+        - key: "odahu/node-selector-webhook"
+          operator: Exists
+    sideEffects: None
