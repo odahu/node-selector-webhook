@@ -14,6 +14,7 @@ spec:
       labels:
     {{- include "node-selector-webhook.selectorLabels" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ .Release.Name }}
       volumes:
         - name: config
           secret:
@@ -36,3 +37,12 @@ spec:
               name: config
             - mountPath: {{ .Values.config.crtDirName }}
               name: certs
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: "{{ .Release.Name }}"
+{{- if .Values.dockerSecret }}
+imagePullSecrets:
+- name: "{{ .Values.dockerSecret }}"
+{{- end }}
