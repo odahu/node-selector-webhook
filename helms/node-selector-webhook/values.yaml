@@ -10,6 +10,10 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# Docker credentials secret name
+# Type: string
+dockerSecret: ""
+
 service:
   type: ClusterIP
   port: 5000
